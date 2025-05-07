@@ -40,10 +40,16 @@ class StorageService {
   private dbVersion = 3 // Increased version for schema update
   private db: IDBDatabase | null = null
   private dbInitPromise: Promise<IDBDatabase> | null = null
+  private isServer: boolean
 
   constructor() {
-    // Initialize the database when the service is created
-    this.dbInitPromise = this.initDB()
+    // Check if we're running on the server
+    this.isServer = typeof window === "undefined"
+
+    // Only initialize the database when in browser environment
+    if (!this.isServer) {
+      this.dbInitPromise = this.initDB()
+    }
   }
 
   // Update the initDB method to include the frameStore
@@ -149,6 +155,11 @@ class StorageService {
 
   // Ensure the database is initialized before any operation
   private async ensureDB(): Promise<IDBDatabase> {
+    // If we're on the server, throw an error
+    if (this.isServer) {
+      throw new Error("IndexedDB is not available on the server")
+    }
+
     if (this.db) return this.db
 
     if (this.dbInitPromise) {
@@ -215,6 +226,12 @@ class StorageService {
   // Then modify the getImage method in the StorageService class
   async getImage(id: string): Promise<StoredImage | null> {
     try {
+      // Validate the ID - if it's undefined, null, or empty, return null immediately
+      if (!id || id.trim() === "") {
+        console.warn("Invalid image ID provided to getImage:", id)
+        return null
+      }
+
       // Check cache first
       const cachedData = imageCache.get(id)
       if (cachedData) {
@@ -617,6 +634,11 @@ class StorageService {
   // Check if the database is accessible
   async checkDatabaseAccess(): Promise<boolean> {
     try {
+      // If we're on the server, return false
+      if (this.isServer) {
+        return false
+      }
+
       await this.ensureDB()
       return true
     } catch (error) {

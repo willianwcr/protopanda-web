@@ -1,64 +1,55 @@
-// A simple in-memory cache for images to improve performance
-
-type CacheEntry = {
-  data: string
-  timestamp: number
-}
+// Simple in-memory cache for image data to improve performance
 
 class ImageCache {
-  private cache: Map<string, CacheEntry> = new Map()
-  private maxSize = 100 // Maximum number of images to cache
-  private expirationTime: number = 1000 * 60 * 30 // 30 minutes
+  private cache: Map<string, string>
+  private maxSize: number
+  private currentSize: number
 
-  // Get an image from the cache
-  get(id: string): string | null {
-    const entry = this.cache.get(id)
-    if (!entry) return null
-
-    // Check if the entry has expired
-    if (Date.now() - entry.timestamp > this.expirationTime) {
-      this.cache.delete(id)
-      return null
-    }
-
-    // Update the timestamp to mark it as recently used
-    entry.timestamp = Date.now()
-    return entry.data
+  constructor(maxSize = 50) {
+    this.cache = new Map()
+    this.maxSize = maxSize
+    this.currentSize = 0
   }
 
-  // Add an image to the cache
   set(id: string, data: string): void {
+    // If we're on the server, don't cache
+    if (typeof window === "undefined") return
+
     // If the cache is full, remove the oldest entry
-    if (this.cache.size >= this.maxSize) {
-      let oldestId: string | null = null
-      let oldestTime = Number.POSITIVE_INFINITY
-
-      for (const [key, entry] of this.cache.entries()) {
-        if (entry.timestamp < oldestTime) {
-          oldestTime = entry.timestamp
-          oldestId = key
-        }
-      }
-
-      if (oldestId) {
-        this.cache.delete(oldestId)
-      }
+    if (this.currentSize >= this.maxSize) {
+      const oldestKey = this.cache.keys().next().value
+      this.cache.delete(oldestKey)
+      this.currentSize--
     }
 
-    this.cache.set(id, {
-      data,
-      timestamp: Date.now(),
-    })
+    // Add the new entry
+    this.cache.set(id, data)
+    this.currentSize++
   }
 
-  // Clear the entire cache
+  get(id: string): string | null {
+    // If we're on the server, return null
+    if (typeof window === "undefined") return null
+
+    return this.cache.get(id) || null
+  }
+
   clear(): void {
+    // If we're on the server, do nothing
+    if (typeof window === "undefined") return
+
     this.cache.clear()
+    this.currentSize = 0
   }
 
-  // Get the current size of the cache
-  get size(): number {
-    return this.cache.size
+  remove(id: string): void {
+    // If we're on the server, do nothing
+    if (typeof window === "undefined") return
+
+    if (this.cache.has(id)) {
+      this.cache.delete(id)
+      this.currentSize--
+    }
   }
 }
 

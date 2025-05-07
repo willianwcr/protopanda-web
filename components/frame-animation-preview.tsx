@@ -49,7 +49,16 @@ export function FrameAnimationPreview({
         setIsLoading(true)
         try {
           const loadedImages: StoredImage[] = []
-          const promises = imageIds.map((id) => storageService.getImage(id))
+          const validImageIds = imageIds.filter((id) => id && id.trim() !== "")
+
+          if (validImageIds.length === 0) {
+            setImages([])
+            imagesLoadedRef.current = true
+            setIsLoading(false)
+            return
+          }
+
+          const promises = validImageIds.map((id) => storageService.getImage(id))
           const results = await Promise.all(promises)
 
           for (const image of results) {

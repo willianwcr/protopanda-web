@@ -53,7 +53,14 @@ export function AnimationPreview() {
       }
 
       // Check if we need to load images
-      const imageIds = animationSequence.map((idx) => framesDef.images[idx])
+      const imageIds = animationSequence.map((idx) => framesDef.images[idx]).filter((id) => id && id.trim() !== "") // Filter out invalid IDs
+
+      if (imageIds.length === 0) {
+        setIsLoading(false)
+        imagesLoadedRef.current = true
+        return
+      }
+
       const allImagesLoaded = imageIds.every((id) => id in preloadedImages)
 
       if (allImagesLoaded && imagesLoadedRef.current) {
